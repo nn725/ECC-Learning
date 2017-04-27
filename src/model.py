@@ -46,8 +46,8 @@ class SimpleAgents(BaseAgents):
         self.transmitter_hidden_2 = tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter))
         self.transmitter_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
 
-        self.channel_input = tf.map_fn(binarize, self.transmitter_output, dtype=tf.int8)
-        self.channel_output = tf.map_fn(bsc, self.channel_input)
+        self.channel_input = tf.map_fn(binarize, self.transmitter_output, dtype=tf.int32)
+        self.channel_output = tf.to_float(tf.map_fn(bsc, self.channel_input))
 
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
@@ -61,7 +61,7 @@ class SimpleAgents(BaseAgents):
         self.rec_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output))
 
         #get training variables
-        self.train_vars = tf.training_variables()
+        self.train_vars = tf.trainable_variables()
         self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
 
         #optimizers
@@ -71,12 +71,14 @@ class SimpleAgents(BaseAgents):
         self.rec_errors = []
 
         #training
-        tf.initialize_all_variables().run()
+        tf.global_variables_initializer().run()
+        # tf.initialize_all_variables().run()
         for i in range(self.epochs):
             iterations = 2000
 
             print('Training Transmitter and Receiver, Epoch:', i + 1)
             rec_loss = self._train(iterations)
+            print("hello")
             self.rec_errors.append(rec_loss)
 
 
