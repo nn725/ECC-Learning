@@ -46,7 +46,7 @@ class SimpleAgents(BaseAgents):
         self.transmitter_hidden_2 = tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter))
         self.transmitter_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
 
-        self.channel_input = tf.map_fn(binarize, self.transmitter_output, dtype=int)
+        self.channel_input = tf.map_fn(binarize, self.transmitter_output, dtype=tf.int8)
         self.channel_output = tf.map_fn(bsc, self.channel_input)
 
         #reciever network
