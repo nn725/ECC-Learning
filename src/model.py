@@ -32,7 +32,6 @@ class BaseAgents(object):
     def train(self):
         pass
 
-    def 
 
 class SimpleAgents(BaseAgents):
     def __init__(self, *args, **kwargs):
