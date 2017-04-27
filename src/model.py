@@ -57,38 +57,38 @@ class SimpleAgents(BaseAgents):
         self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
 
     def train(self):
-    	#Loss functions
-    	self.rec_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output))
+        #Loss functions
+        self.rec_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output))
 
-    	#get training variables
-    	self.train_vars = tf.training_variables()
-    	self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
+        #get training variables
+        self.train_vars = tf.training_variables()
+        self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
 
-    	#optimizers
-    	self.rec_optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(
-    							self.rec_loss, var_list=self.trans_or_rec_vars)
+        #optimizers
+        self.rec_optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(
+                                self.rec_loss, var_list=self.trans_or_rec_vars)
 
-    	self.rec_errors = []
+        self.rec_errors = []
 
-    	#training
-    	tf.initialize_all_variables().run()
-    	for i in range(self.epochs):
-    		iterations = 2000
+        #training
+        tf.initialize_all_variables().run()
+        for i in range(self.epochs):
+            iterations = 2000
 
-    		print('Training Transmitter and Receiver, Epoch:', i + 1)
-    		rec_loss = self._train(iterations)
-    		self.rec_errors.append(rec_loss)
+            print('Training Transmitter and Receiver, Epoch:', i + 1)
+            rec_loss = self._train(iterations)
+            self.rec_errors.append(rec_loss)
 
 
     def _train(self, iterations):
-    	rec_error = 1.0
+        rec_error = 1.0
 
-    	bs = self.batch_size
+        bs = self.batch_size
 
-    	for i in range(iterations):
-    		msg = gen_data(n=bs, block_len=self.block_len)
+        for i in range(iterations):
+            msg = gen_data(n=bs, block_len=self.block_len)
 
-    		_, decode_err = self.sess.run([self.rec_optimizer, self.rec_loss],
+            _, decode_err = self.sess.run([self.rec_optimizer, self.rec_loss],
                                                feed_dict={self.msg: msg})
 
             rec_error = min(rec_error, decode_err)
