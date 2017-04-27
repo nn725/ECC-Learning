@@ -93,7 +93,7 @@ class SimpleAgents(BaseAgents):
 
             rec_error = min(rec_error, decode_err)
 
-        return rec_erro
+        return rec_error
 
 
 class AdversaryAgents(BaseAgents):
