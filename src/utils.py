@@ -9,6 +9,12 @@ def init_weights(name, shape):
     return tf.get_variable(name, shape=shape,
             initializer=tf.contrib.layers.xavier_initializer())
 
+def binarize(bits):
+    out = bits.copy()
+    out[bits < 0.5] = 0
+    out[bits >= 0.5] = 1
+    return out
+
 def bsc(bits, p=ERR_PROB):
     out = bits.copy()
     indices = (np.random(len(bits)) <= p)
