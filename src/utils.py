@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from config import *
+from .config import *
 
 def gen_data(n=BATCH_SIZE, block_length=BLOCK_LEN):
     return np.random.randint(0, 2, size=(n, block_length)*2-1)

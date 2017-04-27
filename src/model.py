@@ -1,5 +1,6 @@
 import tensorflow as tf
-from config import *
+from .config import *
+from .utils import *
 
 #initial plan, set up Alice and Bob nets and the commpy BSC channel
 class BaseAgents(object):
@@ -12,7 +13,7 @@ class BaseAgents(object):
         self.block_len = block_len
         self.N = block_len
         self.batch_size = batch_size
-        self.epochs = eopchs
+        self.epochs = epochs
         self.learning_rate = learning_rate
 
         self.build_model()
