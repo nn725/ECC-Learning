@@ -1,4 +1,12 @@
 import tensorflow as tf
+import numpy as np
+
+import matplotlib
+matplotlib.use('TkAgg')
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 from .config import *
 from .utils import *
 
@@ -24,6 +32,7 @@ class BaseAgents(object):
     def train(self):
         pass
 
+    def 
 
 class SimpleAgents(BaseAgents):
     def __init__(self, *args, **kwargs):
@@ -78,9 +87,9 @@ class SimpleAgents(BaseAgents):
 
             print('Training Transmitter and Receiver, Epoch:', i + 1)
             rec_loss = self._train(iterations)
-            print("hello")
             self.rec_errors.append(rec_loss)
 
+        self.plot_errors()
 
     def _train(self, iterations):
         rec_error = 1.0
@@ -97,6 +106,12 @@ class SimpleAgents(BaseAgents):
 
         return rec_error
 
+    def plot_errors(self):
+        sns.set_style('darkgrid')
+        plt.plot(self.rec_errors)
+        plt.xlabel('Epoch')
+        plt.ylabel('Lowest decoding error achieved')
+        plt.show()
 
 class AdversaryAgents(BaseAgents):
     def __init__(self, *args, **kwargs):
