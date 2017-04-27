@@ -32,6 +32,10 @@ class BaseAgents(object):
     def train(self):
         pass
 
+    def save_model(self, filename):
+        self.trans_saver.save(self.sess, filename+'_transmitter')
+        self.rec_saver.save(self.sess, filename+'_receiver')
+
 
 class SimpleAgents(BaseAgents):
     def __init__(self, *args, **kwargs):
@@ -46,6 +50,11 @@ class SimpleAgents(BaseAgents):
         self.l3_receiver = init_weights("receiver_w_l3", [self.N, self.N])
 
         self.msg = tf.placeholder("float", [None, self.N])
+
+        self.trans_saver = tf.train.Saver([self.l1_transmitter, self.l2_transmitter,
+            self.l3_transmitter])
+        self.rec_saver = tf.train.Saver([self.l1_receiver, self.l2_receiver,
+            self.l3_receiver])
 
         #transmitter network
         #FC layer (block_len (N) x N) -> FC Layer (N x msg_len) -> Output Layer (msg_len x msg_len)

@@ -4,6 +4,9 @@ from argparse import ArgumentParser
 from src.model import SimpleAgents, AdversaryAgents, IndependentAgents
 from src.config import *
 
+from sys import version_info
+input_fn = input if version_info[0] > 2 else raw_input
+
 def build_parser():
     parser = ArgumentParser()
 
@@ -47,6 +50,11 @@ def main():
                 epochs=options.epochs, learning_rate=options.rate)
 
         agents.train()
+        save = input_fn("Save weights? (Y/n) ")
+        if not save:
+            return
+        filename = input_fn("Filename: ")
+        agents.save_model(filename)
 
 if __name__ == '__main__':
     main()
