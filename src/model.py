@@ -46,10 +46,13 @@ class SimpleAgents(BaseAgents):
         self.transmitter_hidden_2 = tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter))
         self.transmitter_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
 
+        self.channel_input = tf.map_fn(binarize, self.transmitter_output, dtype=int)
+        self.channel_output = tf.map_fn(bsc, self.channel_input)
+
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
         ##(not used yet) Conv Layer -> FC Layer
-        self.receiver_hidden_1 = tf.nn.sigmoid(tf.matmul(self.transmitter_output, self.l1_receiver))
+        self.receiver_hidden_1 = tf.nn.sigmoid(tf.matmul(self.channel_output, self.l1_receiver))
         self.receiver_hidden_2 = tf.nn.sigmoid(tf.matmul(self.receiver_hidden_1, self.l2_receiver))
         self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
 
@@ -73,9 +76,11 @@ class SimpleAgents(BaseAgents):
     		iterations = 2000
 
     		print('Training Transmitter and Receiver, Epoch:', i + 1)
+    		rec_loss = self._train(iterations)
+    		self.rec_errors.append(rec_loss)
 
 
-    def _train(self, network, iterations):
+    def _train(self, iterations):
     	rec_error = 1.0
 
     	bs = self.batch_size
@@ -83,7 +88,12 @@ class SimpleAgents(BaseAgents):
     	for i in range(iterations):
     		msg = gen_data(n=bs, block_len=self.block_len)
 
-    		
+    		_, decode_err = self.sess.run([self.rec_optimizer, self.rec_loss],
+                                               feed_dict={self.msg: msg})
+
+            rec_error = min(rec_error, decode_err)
+
+        return rec_erro
 
 
 class AdversaryAgents(BaseAgents):
