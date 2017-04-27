@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from config import *
+from .config import *
 
 def gen_data(n=BATCH_SIZE, block_length=BLOCK_LEN):
     return np.random.randint(0, 2, size=(n, block_length)*2-1)
@@ -8,6 +8,12 @@ def gen_data(n=BATCH_SIZE, block_length=BLOCK_LEN):
 def init_weights(name, shape):
     return tf.get_variable(name, shape=shape,
             initializer=tf.contrib.layers.xavier_initializer())
+
+def binarize(bits):
+    out = bits.copy()
+    out[bits < 0.5] = 0
+    out[bits >= 0.5] = 1
+    return out
 
 def bsc(bits, p=ERR_PROB):
     out = bits.copy()

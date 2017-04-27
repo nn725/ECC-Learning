@@ -7,7 +7,7 @@ from src.config import *
 def build_parser():
     parser = ArgumentParser()
 
-    parser.add_argument('type', type=str, dest='sys_type',
+    parser.add_argument('sys_type', type=str,
             choices=('simple', 'adversary', 'independent'),
             help='which type of system to use',
             metavar='TYPE', default='simple')
@@ -36,7 +36,7 @@ def main():
 
     with tf.Session() as sess:
         if options.sys_type == 'simple':
-            agents_class = SimpleAgent
+            agents_class = SimpleAgents
         elif options.sys_type == 'adversary':
             agents_class = AdversaryAgents
         else:
