@@ -1,6 +1,16 @@
 import tensorflow as tf
-from .config import *
-from .utils import *
+# from .config import *
+# from .utils import *
+from config import *
+from utils import *
+
+import matplotlib
+# OSX fix
+matplotlib.use('TkAgg')
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 #initial plan, set up Alice and Bob nets and the commpy BSC channel
 class BaseAgents(object):
@@ -81,6 +91,8 @@ class SimpleAgents(BaseAgents):
             print("hello")
             self.rec_errors.append(rec_loss)
 
+        self.plot_errors()
+
 
     def _train(self, iterations):
         rec_error = 1.0
@@ -97,6 +109,16 @@ class SimpleAgents(BaseAgents):
 
         return rec_error
 
+    def plot_errors(self):
+        """
+        Plot Lowest Decoding Errors achieved by Receiver per epoch
+        """
+        sns.set_style("darkgrid")
+        plt.plot(self.rec_errors)
+        plt.legend(['receiver', 'transmitter'])
+        plt.xlabel('Epoch')
+        plt.ylabel('Lowest Decode error achieved')
+        plt.show()
 
 class AdversaryAgents(BaseAgents):
     def __init__(self, *args, **kwargs):
