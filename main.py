@@ -5,6 +5,8 @@ from src.model import SimpleAgents, AdversaryAgents, IndependentAgents
 from src.config import *
 
 from sys import version_info
+from tensorflow.python import debug as tf_debug
+
 input_fn = input if version_info[0] > 2 else raw_input
 
 def build_parser():
@@ -31,6 +33,9 @@ def build_parser():
     parser.add_argument('--batch-size', type=int, dest='batch_size',
             help='batch size', metavar='BATCH_SIZE', default=BATCH_SIZE)
 
+    parser.add_argument('-d', dest='debug', help='debug',
+            action='store_true')
+
     return parser
 
 def main():
@@ -38,6 +43,9 @@ def main():
     options = parser.parse_args()
 
     with tf.Session() as sess:
+        if options.debug:
+            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         if options.sys_type == 'simple':
             agents_class = SimpleAgents
         elif options.sys_type == 'adversary':
