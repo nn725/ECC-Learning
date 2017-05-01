@@ -1,11 +1,10 @@
 import tensorflow as tf
-# from .config import *
-# from .utils import *
+
 from config import *
 from utils import *
+from layers import conv_layer
 
 import matplotlib
-# OSX fix
 matplotlib.use('TkAgg')
 
 import matplotlib.pyplot as plt
@@ -34,6 +33,10 @@ class BaseAgents(object):
     def train(self):
         pass
 
+    def save_model(self, filename):
+        self.trans_saver.save(self.sess, filename+'_transmitter')
+        self.rec_saver.save(self.sess, filename+'_receiver')
+
 
 class SimpleAgents(BaseAgents):
     def __init__(self, *args, **kwargs):
@@ -49,22 +52,42 @@ class SimpleAgents(BaseAgents):
 
         self.msg = tf.placeholder("float", [None, self.N])
 
+        self.trans_saver = tf.train.Saver([self.l1_transmitter, self.l2_transmitter,
+            self.l3_transmitter])
+        self.rec_saver = tf.train.Saver([self.l1_receiver, self.l2_receiver,
+            self.l3_receiver])
+
+        # self.trans_saver = tf.train.Saver([self.l1_transmitter])
+        # self.rec_saver = tf.train.Saver([self.l1_receiver])
+
         #transmitter network
         #FC layer (block_len (N) x N) -> FC Layer (N x msg_len) -> Output Layer (msg_len x msg_len)
-        ##(not used yet) FC layer -> Conv layer
+        #(not used yet) FC layer -> Conv layer
         self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
+        self.transmitter_hidden_1 = tf.matmul(self.msg, self.l1_transmitter)
         self.transmitter_hidden_2 = tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter))
         self.transmitter_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
+
+        # #alternate
+        # # FC -> 2 conv layers
+        # self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
+        # self.transmitter_output = tf.squeeze(conv_layer(self.transmitter_hidden_1, "transmitter"))
 
         self.channel_input = tf.map_fn(binarize, self.transmitter_output, dtype=tf.int32)
         self.channel_output = tf.to_float(tf.map_fn(bsc, self.channel_input))
 
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
-        ##(not used yet) Conv Layer -> FC Layer
+        #(not used yet) Conv Layer -> FC Layer
         self.receiver_hidden_1 = tf.nn.sigmoid(tf.matmul(self.channel_output, self.l1_receiver))
         self.receiver_hidden_2 = tf.nn.sigmoid(tf.matmul(self.receiver_hidden_1, self.l2_receiver))
-        self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
+        #self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
+        self.receiver_output = tf.squeeze(tf.matmul(self.receiver_hidden_2, self.l3_receiver))
+
+        # #alternate
+        # # 2 conv -> FC
+        # self.receiver_conv = conv_layer(self.channel_output, "receiver")
+        # self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_conv, self.l1_receiver)))
 
     def train(self):
         #Loss functions
@@ -88,11 +111,9 @@ class SimpleAgents(BaseAgents):
 
             print('Training Transmitter and Receiver, Epoch:', i + 1)
             rec_loss = self._train(iterations)
-            print("hello")
             self.rec_errors.append(rec_loss)
 
         self.plot_errors()
-
 
     def _train(self, iterations):
         rec_error = 1.0
@@ -100,6 +121,8 @@ class SimpleAgents(BaseAgents):
         bs = self.batch_size
 
         for i in range(iterations):
+            if i % 500 == 0:
+                print(i)
             msg = gen_data(n=bs, block_len=self.block_len)
 
             _, decode_err = self.sess.run([self.rec_optimizer, self.rec_loss],
@@ -110,14 +133,10 @@ class SimpleAgents(BaseAgents):
         return rec_error
 
     def plot_errors(self):
-        """
-        Plot Lowest Decoding Errors achieved by Receiver per epoch
-        """
-        sns.set_style("darkgrid")
+        sns.set_style('darkgrid')
         plt.plot(self.rec_errors)
-        plt.legend(['receiver', 'transmitter'])
         plt.xlabel('Epoch')
-        plt.ylabel('Lowest Decode error achieved')
+        plt.ylabel('Lowest decoding error achieved')
         plt.show()
 
 class AdversaryAgents(BaseAgents):
