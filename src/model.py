@@ -13,13 +13,14 @@ import seaborn as sns
 
 #initial plan, set up Alice and Bob nets and the commpy BSC channel
 class BaseAgents(object):
-    def __init__(self, sess, block_len=BLOCK_LEN, msg_len=MSG_LEN, 
-                batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, 
+    def __init__(self, sess, block_len=BLOCK_LEN, msg_len=MSG_LEN,
+                inter_len=INTER_LEN, batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, 
                 learning_rate=LEARNING_RATE):
 
         self.sess = sess
         self.msg_len = msg_len
         self.block_len = block_len
+        self.inter_len = inter_len
         self.N = block_len
         self.batch_size = batch_size
         self.epochs = epochs
@@ -44,10 +45,10 @@ class SimpleAgents(BaseAgents):
 
     def build_model(self):
         self.l1_transmitter = init_weights("transmitter_w_l1", [self.N, self.N])
-        self.l2_transmitter = init_weights("transmitter_w_l2", [self.N, self.msg_len])
-        self.l3_transmitter = init_weights("transmitter_w_l3", [self.msg_len, self.msg_len])
-        self.l1_receiver = init_weights("receiver_w_l1", [self.msg_len, self.msg_len])
-        self.l2_receiver = init_weights("receiver_w_l2", [self.msg_len, self.N])
+        self.l2_transmitter = init_weights("transmitter_w_l2", [self.N, self.inter_len])
+        self.l3_transmitter = init_weights("transmitter_w_l3", [self.inter_len, self.msg_len])
+        self.l1_receiver = init_weights("receiver_w_l1", [self.msg_len, self.inter_len])
+        self.l2_receiver = init_weights("receiver_w_l2", [self.inter_len, self.N])
         self.l3_receiver = init_weights("receiver_w_l3", [self.N, self.N])
 
         self.msg = tf.placeholder("float", [None, self.N])
@@ -98,7 +99,7 @@ class SimpleAgents(BaseAgents):
         self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
 
         #optimizers
-        self.rec_optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(
+        self.rec_optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(
                                 self.rec_loss, var_list=self.trans_or_rec_vars)
 
         self.rec_errors = []
@@ -107,7 +108,7 @@ class SimpleAgents(BaseAgents):
         tf.global_variables_initializer().run()
         # tf.initialize_all_variables().run()
         for i in range(self.epochs):
-            iterations = 2000
+            iterations = 1000
 
             print('Training Transmitter and Receiver, Epoch:', i + 1)
             rec_loss = self._train(iterations)
@@ -121,7 +122,7 @@ class SimpleAgents(BaseAgents):
         bs = self.batch_size
 
         for i in range(iterations):
-            if i % 500 == 0:
+            if i % 200 == 0:
                 print(i)
             msg = gen_data(n=bs, block_len=self.block_len)
 
