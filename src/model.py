@@ -10,20 +10,40 @@ import seaborn as sns
 from .config import *
 from .utils import *
 
+import logging
+
+mod_logger = logging.getLogger(__name__)
+
 #initial plan, set up Alice and Bob nets and the commpy BSC channel
 class BaseAgents(object):
     def __init__(self, sess, block_len=BLOCK_LEN, msg_len=MSG_LEN, 
                 batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, 
-                learning_rate=LEARNING_RATE):
+                learning_rate=LEARNING_RATE, level=None):
 
         self.sess = sess
+
+        if not level:
+            level = logging.INFO
+
+        self.logger = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.logger.setLevel(level)
+        ch = logging.StreamHandler()
+        ch.setFormatter(TrainFormatter())
+        self.logger.addHandler(ch)
+
+        self.logger.info('MSG_LEN = ' + str(msg_len))
         self.msg_len = msg_len
+        self.logger.info('BLOCK_LEN = ' + str(block_len))
         self.block_len = block_len
         self.N = block_len
+        self.logger.info('BATCH_SIZE = ' + str(batch_size))
         self.batch_size = batch_size
+        self.logger.info('EPOCHS = ' + str(epochs))
         self.epochs = epochs
+        self.logger.info('LEARNING_RATE = ' + str(learning_rate))
         self.learning_rate = learning_rate
 
+        self.logger.info('BUILDING MODEL')
         self.build_model()
 
     def build_model(self):
@@ -92,14 +112,14 @@ class SimpleAgents(BaseAgents):
         # tf.initialize_all_variables().run()
         for i in range(self.epochs):
             iterations = 2000
-
-            print('Training Transmitter and Receiver, Epoch:', i + 1)
-            rec_loss = self._train(iterations)
+            self.logger.info('Training Epoch: ' + str(i))
+            rec_loss = self._train(iterations, i)
+            self.logger.info(iterations, rec_loss, i)
             self.rec_errors.append(rec_loss)
 
         self.plot_errors()
 
-    def _train(self, iterations):
+    def _train(self, iterations, epoch):
         rec_error = 1.0
 
         bs = self.batch_size
@@ -109,7 +129,7 @@ class SimpleAgents(BaseAgents):
 
             _, decode_err = self.sess.run([self.rec_optimizer, self.rec_loss],
                                                feed_dict={self.msg: msg})
-
+            self.logger.debug(i, decode_err)
             rec_error = min(rec_error, decode_err)
 
         return rec_error
