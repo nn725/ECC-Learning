@@ -9,6 +9,25 @@ from tensorflow.python import debug as tf_debug
 
 input_fn = input if version_info[0] > 2 else raw_input
 
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+# create file handler
+fh = logging.FileHandler('log')
+fh.setLevel(logging.DEBUG)
+# create stream handler
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+# create formatter
+formatter = logging.Formatter('%(asctime)s/%(name)s: %(levelname)s - %(message)s')
+# set formatters
+ch.setFormatter(formatter)
+fh.setFormatter(formatter)
+# add handlers
+logger.addHandler(ch)
+logger.addHandler(fh)
+
 def build_parser():
     parser = ArgumentParser()
 
@@ -39,30 +58,45 @@ def build_parser():
     return parser
 
 def main():
+    logger.debug('Building parser')
     parser = build_parser()
+    logger.debug('Parsing args')
     options = parser.parse_args()
 
     with tf.Session() as sess:
+        level = logging.INFO
         if options.debug:
-            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
+            logger.info('Starting debug')
+            # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+            # sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
+            level = logging.DEBUG
         if options.sys_type == 'simple':
+            logger.info('Using SimpleAgents')
             agents_class = SimpleAgents
         elif options.sys_type == 'adversary':
+            logger.info('Using AdversaryAgents')
             agents_class = AdversaryAgents
         else:
+            logger.info('Using IndependentAgents')
             agents_class = IndependentAgents
 
+        logger.info('Building model')
         agents = agents_class(sess, block_len=options.block_len,
                 msg_len=options.msg_len, batch_size=options.batch_size,
-                epochs=options.epochs, learning_rate=options.rate)
+                epochs=options.epochs, learning_rate=options.rate, level=level)
 
+        logger.info('Training')
         agents.train()
+        logger.info('Done training')
         save = input_fn("Save weights? (Y/n) ")
         if not save:
+            logger.debug('Did not save weights')
+            logger.info('Done')
             return
         filename = input_fn("Filename: ")
+        logger.debug('Saving weights to ' + filename)
         agents.save_model(filename)
+        logger.info('Done')
 
 if __name__ == '__main__':
     main()
