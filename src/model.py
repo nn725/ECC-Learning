@@ -88,7 +88,7 @@ class SimpleAgents(BaseAgents):
         #transmitter network
         #FC layer (block_len (N) x N) -> FC Layer (N x msg_len) -> Output Layer (msg_len x msg_len)
         #(not used yet) FC layer -> Conv layer
-        # self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
+        self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
         self.transmitter_hidden_1 = tf.matmul(self.msg, self.l1_transmitter)
         self.transmitter_hidden_2 = tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter))
         self.transmitter_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
@@ -117,6 +117,9 @@ class SimpleAgents(BaseAgents):
     def train(self):
         #Loss functions
         self.rec_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output))
+        # print(tf.map_fn(utils.binarize, self.receiver_output))
+        # print(self.msg)
+        # self.bin_loss = tf.reduce_mean(tf.abs(tf.map_fn(utils.binarize, self.receiver_output) - tf.map_fn(utils.binarize, self.msg)))
 
         #get training variables
         self.train_vars = tf.trainable_variables()
@@ -127,6 +130,7 @@ class SimpleAgents(BaseAgents):
                                 self.rec_loss, var_list=self.trans_or_rec_vars)
 
         self.rec_errors = []
+        #self.bin_errors = []
 
         #training
         tf.global_variables_initializer().run()
@@ -136,12 +140,15 @@ class SimpleAgents(BaseAgents):
             self.logger.info('Training Epoch: ' + str(i))
             rec_loss = self._train(iterations, i)
             self.logger.info(iterations, rec_loss, i)
+            #self.logger.info(iterations, bin_loss, i)
             self.rec_errors.append(rec_loss)
+            #self.bin_errors.append(bin_loss)
 
         self.plot_errors()
 
     def _train(self, iterations, epoch):
         rec_error = 1.0
+        #bin_error = 1.0
 
         bs = self.batch_size
 
@@ -152,12 +159,15 @@ class SimpleAgents(BaseAgents):
                                                feed_dict={self.msg: msg})
             self.logger.debug(i, decode_err)
             rec_error = min(rec_error, decode_err)
+            #bin_error = min(bin_error, binarize_err)
 
-        return rec_error
+
+        return rec_error #bin_error
 
     def plot_errors(self):
         sns.set_style('darkgrid')
         plt.plot(self.rec_errors)
+        plt.plot(self.bin_errors)
         plt.xlabel('Epoch')
         plt.ylabel('Lowest decoding error achieved')
         plt.show()
