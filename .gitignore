@@ -91,5 +91,6 @@ ENV/
 # vim .swp files
 *.swp
 
-# log file
+# log files
 log
+train_log

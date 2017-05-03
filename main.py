@@ -42,6 +42,9 @@ def build_parser():
     parser.add_argument('--msg-len', type=int, dest='msg_len',
             help='message length', metavar='MSG_LEN', default=MSG_LEN)
 
+    parser.add_argument('--inter-len', type=int, dest='inter_len',
+            help='internal length', metavar='INTER_LEN', default=INTER_LEN)
+
     parser.add_argument('--epochs', type=int, dest='epochs',
             help='number of epochs', metavar='EPOCHS', default=NUM_EPOCHS)
 
@@ -82,14 +85,17 @@ def main():
 
         logger.info('Building model')
         agents = agents_class(sess, block_len=options.block_len,
-                msg_len=options.msg_len, batch_size=options.batch_size,
-                epochs=options.epochs, learning_rate=options.rate, level=level)
+                msg_len=options.msg_len, inter_len=options.inter_len,
+                batch_size=options.batch_size, epochs=options.epochs,
+                learning_rate=options.rate, level=level)
 
         logger.info('Training')
         agents.train()
         logger.info('Done training')
-        save = input_fn("Save weights? (Y/n) ")
-        if not save:
+        save = input_fn("Save weights? (y/n) ")
+        while save not in ['y', 'n']:
+            save = input_fn('Please enter y or n ')
+        if save == 'n':
             logger.debug('Did not save weights')
             logger.info('Done')
             return

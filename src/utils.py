@@ -4,9 +4,9 @@ import time
 import datetime
 from datetime import timedelta
 import logging
-from config import *
+from . import config
 
-def gen_data(n=BATCH_SIZE, block_len=BLOCK_LEN):
+def gen_data(n=config.BATCH_SIZE, block_len=config.BLOCK_LEN):
     return np.random.randint(0, 2, size=(n, block_len))
 
 def init_weights(name, shape):
@@ -16,8 +16,8 @@ def init_weights(name, shape):
 def binarize(bit):
     return tf.to_int32(tf.rint(bit))
 
-def bsc(bit, p=ERR_PROB):
-    return bit if np.random.random() >= ERR_PROB else tf.subtract(1, bit)
+def bsc(bit, p=config.ERR_PROB):
+    return bit if np.random.random() >= p else tf.subtract(1, bit)
 
 class TrainFormatter(logging.Formatter):
     def __init__(self):
@@ -33,6 +33,9 @@ class TrainFormatter(logging.Formatter):
             return self.train_format(record, record.msg, record.args)
 
     def train_format(self, record, iteration, args):
+        iter_elapsed = timedelta(seconds=(time.time() - self.iter_time)).total_seconds()
+        epoch_elapsed = timedelta(seconds=(time.time() - self.epoch_time)).total_seconds()
+
         if len(args) > 1:
             self.epoch_time = time.time()
             self.epoch = args[1]
@@ -41,9 +44,10 @@ class TrainFormatter(logging.Formatter):
             epoch = False
         err = args[0]
 
-        iter_elapsed = timedelta(seconds=(time.time() - self.iter_time)).total_seconds()
-        epoch_elapsed = timedelta(seconds=(time.time() - self.epoch_time)).total_seconds()
         self.iter_time = time.time()
+
+        if abs(iter_elapsed - epoch_elapsed) < 0.001:
+            iter_elapsed = epoch_elapsed / 2000
 
         message = '[epoch:' + str(self.epoch) + '/step:' + str(iteration) + ']'
         message += 'Epoch Error:' if epoch else ' Error:'

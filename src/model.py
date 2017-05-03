@@ -1,8 +1,8 @@
 import tensorflow as tf
 
-from config import *
-from utils import *
-from layers import conv_layer
+from . import config
+from . import utils
+# from layers import conv_layer
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -17,9 +17,9 @@ mod_logger = logging.getLogger(__name__)
 
 #initial plan, set up Alice and Bob nets and the commpy BSC channel
 class BaseAgents(object):
-    def __init__(self, sess, block_len=BLOCK_LEN, msg_len=MSG_LEN,
-                inter_len=INTER_LEN, batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, 
-                learning_rate=LEARNING_RATE):
+    def __init__(self, sess, block_len=config.BLOCK_LEN, msg_len=config.MSG_LEN,
+                inter_len=config.INTER_LEN, batch_size=config.BATCH_SIZE,
+                epochs=config.NUM_EPOCHS, learning_rate=config.LEARNING_RATE, level=None):
 
         self.sess = sess
 
@@ -29,13 +29,17 @@ class BaseAgents(object):
         self.logger = logging.getLogger(__name__ + '.' + self.__class__.__name__)
         self.logger.setLevel(level)
         ch = logging.StreamHandler()
-        ch.setFormatter(TrainFormatter())
+        fh = logging.FileHandler('train_log')
+        ch.setFormatter(utils.TrainFormatter())
+        fh.setFormatter(utils.TrainFormatter())
         self.logger.addHandler(ch)
+        self.logger.addHandler(fh)
 
         self.logger.info('MSG_LEN = ' + str(msg_len))
         self.msg_len = msg_len
         self.logger.info('BLOCK_LEN = ' + str(block_len))
         self.block_len = block_len
+        self.logger.info('INTER_LEN = ' + str(inter_len))
         self.inter_len = inter_len
         self.N = block_len
         self.logger.info('BATCH_SIZE = ' + str(batch_size))
@@ -64,12 +68,12 @@ class SimpleAgents(BaseAgents):
         super(SimpleAgents, self).__init__(*args, **kwargs)
 
     def build_model(self):
-        self.l1_transmitter = init_weights("transmitter_w_l1", [self.N, self.N])
-        self.l2_transmitter = init_weights("transmitter_w_l2", [self.N, self.inter_len])
-        self.l3_transmitter = init_weights("transmitter_w_l3", [self.inter_len, self.msg_len])
-        self.l1_receiver = init_weights("receiver_w_l1", [self.msg_len, self.inter_len])
-        self.l2_receiver = init_weights("receiver_w_l2", [self.inter_len, self.N])
-        self.l3_receiver = init_weights("receiver_w_l3", [self.N, self.N])
+        self.l1_transmitter = utils.init_weights("transmitter_w_l1", [self.N, self.N])
+        self.l2_transmitter = utils.init_weights("transmitter_w_l2", [self.N, self.inter_len])
+        self.l3_transmitter = utils.init_weights("transmitter_w_l3", [self.inter_len, self.msg_len])
+        self.l1_receiver = utils.init_weights("receiver_w_l1", [self.msg_len, self.inter_len])
+        self.l2_receiver = utils.init_weights("receiver_w_l2", [self.inter_len, self.N])
+        self.l3_receiver = utils.init_weights("receiver_w_l3", [self.N, self.N])
 
         self.msg = tf.placeholder("float", [None, self.N])
 
@@ -94,8 +98,8 @@ class SimpleAgents(BaseAgents):
         # self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
         # self.transmitter_output = tf.squeeze(conv_layer(self.transmitter_hidden_1, "transmitter"))
 
-        self.channel_input = tf.map_fn(binarize, self.transmitter_output, dtype=tf.int32)
-        self.channel_output = tf.to_float(tf.map_fn(bsc, self.channel_input))
+        self.channel_input = tf.map_fn(utils.binarize, self.transmitter_output, dtype=tf.int32)
+        self.channel_output = tf.to_float(tf.map_fn(utils.bsc, self.channel_input))
 
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
@@ -142,9 +146,7 @@ class SimpleAgents(BaseAgents):
         bs = self.batch_size
 
         for i in range(iterations):
-            if i % 200 == 0:
-                print(i)
-            msg = gen_data(n=bs, block_len=self.block_len)
+            msg = utils.gen_data(n=bs, block_len=self.block_len)
 
             _, decode_err = self.sess.run([self.rec_optimizer, self.rec_loss],
                                                feed_dict={self.msg: msg})
