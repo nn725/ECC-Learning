@@ -14,7 +14,7 @@ def init_weights(name, shape):
             initializer=tf.contrib.layers.xavier_initializer())
 
 def binarize(bit):
-    return tf.to_int32(tf.rint(bit))
+    return tf.rint(bit)
 
 def bsc(bit, p=config.ERR_PROB):
     return bit if np.random.random() >= p else tf.subtract(1, bit)
@@ -52,7 +52,7 @@ class TrainFormatter(logging.Formatter):
         message = '[epoch:' + str(self.epoch) + '/step:' + str(iteration) + ']'
         message += 'Epoch Error:' if epoch else ' Error:'
         message += str(err)
-        message += ' (Step: ' + str(iter_elapsed) + ' Epoch: ' + str(epoch_elapsed) + ')'
+        message += ' (Step: ' + '{0:.3f}'.format(iter_elapsed) + ' Epoch: ' + str(epoch_elapsed)[:6] + ')'
 
         record.msg = message
         record.args = ()
