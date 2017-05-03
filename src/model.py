@@ -142,7 +142,6 @@ class SimpleAgents(BaseAgents):
             rec_loss, bin_loss = self._train(iterations, i)
             self.logger.info(iterations, rec_loss, i)
             self.rec_errors.append(rec_loss)
-            print(bin_loss)
             self.bin_errors.append(bin_loss)
 
         self.plot_errors()
