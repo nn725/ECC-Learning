@@ -88,7 +88,7 @@ class SimpleAgents(BaseAgents):
         #transmitter network
         #FC layer (block_len (N) x N) -> FC Layer (N x msg_len) -> Output Layer (msg_len x msg_len)
         #(not used yet) FC layer -> Conv layer
-        self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
+        # self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
         self.transmitter_hidden_1 = tf.matmul(self.msg, self.l1_transmitter)
         self.transmitter_hidden_2 = tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter))
         self.transmitter_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
@@ -106,8 +106,8 @@ class SimpleAgents(BaseAgents):
         #(not used yet) Conv Layer -> FC Layer
         self.receiver_hidden_1 = tf.nn.sigmoid(tf.matmul(self.channel_output, self.l1_receiver))
         self.receiver_hidden_2 = tf.nn.sigmoid(tf.matmul(self.receiver_hidden_1, self.l2_receiver))
-        #self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
-        self.receiver_output = tf.squeeze(tf.matmul(self.receiver_hidden_2, self.l3_receiver))
+        self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
+        #self.receiver_output = tf.map_fn(utils.binarize, tf.squeeze(tf.matmul(self.receiver_hidden_2, self.l3_receiver)), dtype=tf.int32)
 
         # #alternate
         # # 2 conv -> FC
@@ -161,6 +161,7 @@ class SimpleAgents(BaseAgents):
         plt.xlabel('Epoch')
         plt.ylabel('Lowest decoding error achieved')
         plt.show()
+
 
 class AdversaryAgents(BaseAgents):
     def __init__(self, *args, **kwargs):
