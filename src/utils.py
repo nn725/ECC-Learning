@@ -4,7 +4,7 @@ import time
 import datetime
 from datetime import timedelta
 import logging
-from .config import *
+from config import *
 
 def gen_data(n=BATCH_SIZE, block_len=BLOCK_LEN):
     return np.random.randint(0, 2, size=(n, block_len))
