@@ -149,7 +149,7 @@ class SimpleAgents(BaseAgents):
 
     def _train(self, iterations, epoch):
         rec_error = 1.0
-        bin_error = 0.0
+        bin_error = 1.0
 
         bs = self.batch_size
 
@@ -160,7 +160,7 @@ class SimpleAgents(BaseAgents):
                 self.rec_loss, self.bin_loss], feed_dict={self.msg: msg})
             self.logger.debug(i, decode_err)
             rec_error = min(rec_error, decode_err)
-            bin_error = max(bin_error, bin_loss)
+            bin_error = min(bin_error, bin_loss)
 
         return rec_error, bin_error
 
@@ -168,9 +168,9 @@ class SimpleAgents(BaseAgents):
         sns.set_style('darkgrid')
         plt.plot(self.rec_errors)
         plt.plot(self.bin_errors)
-        plt.legend(['min loss', 'max err'])
+        plt.legend(['loss', 'binary error'])
         plt.xlabel('Epoch')
-        plt.ylabel('Lowest/Highest decoding error achieved')
+        plt.ylabel('Lowest decoding error achieved')
         plt.show()
 
 class AdversaryAgents(BaseAgents):
