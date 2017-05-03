@@ -127,7 +127,7 @@ class SimpleAgents(BaseAgents):
         self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
 
         #optimizers
-        self.rec_optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(
+        self.rec_optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(
                 self.rec_loss, var_list=self.trans_or_rec_vars)
 
         self.rec_errors = []
