@@ -141,6 +141,7 @@ class SimpleAgents(BaseAgents):
             self.logger.info('Training Epoch: ' + str(i))
             rec_loss, bin_loss = self._train(iterations, i)
             self.logger.info(iterations, rec_loss, i)
+            self.logger.info(iterations, bin_loss, i)
             self.rec_errors.append(rec_loss)
             self.bin_errors.append(bin_loss)
 
@@ -171,6 +172,7 @@ class SimpleAgents(BaseAgents):
         plt.xlabel('Epoch')
         plt.ylabel('Lowest decoding error achieved')
         plt.show()
+
 
 class AdversaryAgents(BaseAgents):
     def __init__(self, *args, **kwargs):
