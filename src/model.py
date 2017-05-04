@@ -137,11 +137,11 @@ class SimpleAgents(BaseAgents):
         tf.global_variables_initializer().run()
         # tf.initialize_all_variables().run()
         for i in range(self.epochs):
-            iterations = 1000
+            iterations = 500
             self.logger.info('Training Epoch: ' + str(i))
             rec_loss, bin_loss = self._train(iterations, i)
             self.logger.info(iterations, rec_loss, i)
-            #self.logger.info(iterations, bin_loss, i)
+            self.logger.info(iterations, bin_loss, i)
             self.rec_errors.append(rec_loss)
             self.bin_errors.append(bin_loss)
 
