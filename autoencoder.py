@@ -14,9 +14,17 @@ def binarize_grad(x, dy):
 def binarize(x):
     return tf.floor(x)*2+1
 
+num_change=1
+
+@function.Defun(grad_func=binarize_grad)
+def bsc(x):
+    indices = np.squeeze(np.random.randint(n_hidden_2, size=[num_change, batch_size]))
+    update = np.ones((batch_size, n_hidden_2))
+    update[range(batch_size), indices] = -1
+    return tf.multiply(x, tf.convert_to_tensor(update, dtype=tf.float32))
 learning_rate = 0.01
 num_epochs = 20
-batch_size = 256
+batch_size = 500
 
 n_hidden_1 = 8
 n_hidden_2 = 16
@@ -48,7 +56,7 @@ def decoder(x):
     return layer2
 
 encoder_op = encoder(x)
-decoder_op = binarize(decoder(binarize(encoder_op)))
+decoder_op = decoder(bsc(binarize(encoder_op), ))
 
 y_pred = decoder_op
 y_true = x
@@ -67,7 +75,7 @@ with tf.Session() as sess:
             batch_x = gen_data(batch_size, n_input)
             _, c = sess.run([optimizer, cost], feed_dict={x: batch_x})
         print('Epoch:', str(epoch+1), 'cost:', str(c))
-
-    actual, encode_decode = sess.run([y_true, y_pred], feed_dict={x: gen_data(10, n_input)})
+    batch_size = 10
+    actual, encode_decode = sess.run([y_true, y_pred], feed_dict={x: gen_data(500, n_input)})
     for i in range(10):
         print(actual[i], encode_decode[i])
