@@ -1,9 +1,18 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+from tensorflow.python.framework import function
 
 def gen_data(n, block_len):
     return np.random.randint(0, 2, size=(n, block_len))*2-1
+
+@function.Defun()
+def binarize_grad(x, dy):
+    return dy
+
+@function.Defun(grad_func=binarize_grad)
+def binarize(x):
+    return tf.floor(x)*2+1
 
 learning_rate = 0.01
 num_epochs = 20
@@ -39,7 +48,7 @@ def decoder(x):
     return layer2
 
 encoder_op = encoder(x)
-decoder_op = decoder(encoder_op)
+decoder_op = binarize(decoder(binarize(encoder_op)))
 
 y_pred = decoder_op
 y_true = x
