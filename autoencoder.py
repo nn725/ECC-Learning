@@ -3,15 +3,18 @@ import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+from tensorflow.python.framework import function
 
 def gen_data(n, block_len):
     return np.random.randint(0, 2, size=(n, block_len))*2-1
 
-def bsc(bit, p=0):
-    return bit if np.random.random() >= p else tf.negative(bit)
+@function.Defun()
+def binarize_grad(x, dy):
+    return dy
 
-def binarize(bit):
-    return tf.sign(bit)
+@function.Defun(grad_func=binarize_grad)
+def binarize(x):
+    return tf.floor(x)*2+1
 
 learning_rate = 0.01
 num_epochs = 20
@@ -47,9 +50,7 @@ def decoder(x):
     return layer2
 
 encoder_op = encoder(x)
-channel_input = tf.map_fn(binarize, encoder_op)
-channel_output = tf.to_float(tf.map_fn(bsc, channel_input))
-decoder_op = decoder(channel_output)
+decoder_op = binarize(decoder(binarize(encoder_op)))
 
 y_pred = decoder_op
 y_true = x
