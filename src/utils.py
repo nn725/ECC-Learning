@@ -7,17 +7,17 @@ import logging
 from . import config
 
 def gen_data(n=config.BATCH_SIZE, block_len=config.BLOCK_LEN):
-    return np.random.randint(0, 2, size=(n, block_len))
+    return np.random.randint(0, 2, size=(n, block_len))*2-1
 
 def init_weights(name, shape):
     return tf.get_variable(name, shape=shape,
             initializer=tf.contrib.layers.xavier_initializer())
 
 def binarize(bit):
-    return tf.rint(bit)
+    return tf.sign(bit)
 
 def bsc(bit, p=config.ERR_PROB):
-    return bit if np.random.random() >= p else tf.subtract(1, bit)
+    return bit if np.random.random() >= p else tf.negative(bit)
 
 class TrainFormatter(logging.Formatter):
     def __init__(self):

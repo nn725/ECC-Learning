@@ -88,9 +88,9 @@ class SimpleAgents(BaseAgents):
         #transmitter network
         #FC layer (block_len (N) x N) -> FC Layer (N x msg_len) -> Output Layer (msg_len x msg_len)
         #(not used yet) FC layer -> Conv layer
-        self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
+        self.transmitter_hidden_1 = tf.tanh(tf.matmul(self.msg, self.l1_transmitter))
         # self.transmitter_hidden_1 = tf.matmul(self.msg, self.l1_transmitter)
-        self.transmitter_hidden_2 = tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter))
+        self.transmitter_hidden_2 = tf.tanh(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter))
         self.transmitter_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
         # self.transmitter_output = tf.verify_tensor_all_finite(self.transmitter_output,
         #         'transmitter output not finite')
@@ -106,8 +106,8 @@ class SimpleAgents(BaseAgents):
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
         #(not used yet) Conv Layer -> FC Layer
-        self.receiver_hidden_1 = tf.nn.sigmoid(tf.matmul(self.channel_output, self.l1_receiver))
-        self.receiver_hidden_2 = tf.nn.sigmoid(tf.matmul(self.receiver_hidden_1, self.l2_receiver))
+        self.receiver_hidden_1 = tf.tanh(tf.matmul(self.channel_output, self.l1_receiver))
+        self.receiver_hidden_2 = tf.tanh(tf.matmul(self.receiver_hidden_1, self.l2_receiver))
         #self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
         self.receiver_output = tf.squeeze(tf.matmul(self.receiver_hidden_2, self.l3_receiver))
         self.receiver_output_binary = tf.map_fn(utils.binarize, self.receiver_output, dtype=tf.float32)
@@ -119,9 +119,9 @@ class SimpleAgents(BaseAgents):
 
     def train(self):
         #Loss functions
-        self.rec_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output))
-        self.bin_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output_binary))
-        # self.bin_loss = tf.Print(self.bin_loss, [self.msg, self.receiver_output_binary, self.bin_loss], summarize=8)
+        self.rec_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output)/2)
+        self.bin_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output_binary)/2)
+        # self.bin_loss = tf.Print(self.bin_loss, [self.msg, self.receiver_output, self.rec_loss], summarize=8)
         #get training variables
         self.train_vars = tf.trainable_variables()
         self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
