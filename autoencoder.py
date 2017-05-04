@@ -1,9 +1,17 @@
 import tensorflow as tf
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 def gen_data(n, block_len):
     return np.random.randint(0, 2, size=(n, block_len))*2-1
+
+def bsc(bit, p=0):
+    return bit if np.random.random() >= p else tf.negative(bit)
+
+def binarize(bit):
+    return tf.sign(bit)
 
 learning_rate = 0.01
 num_epochs = 20
@@ -39,13 +47,15 @@ def decoder(x):
     return layer2
 
 encoder_op = encoder(x)
-decoder_op = decoder(encoder_op)
+channel_input = tf.map_fn(binarize, encoder_op)
+channel_output = tf.to_float(tf.map_fn(bsc, channel_input))
+decoder_op = decoder(channel_output)
 
 y_pred = decoder_op
 y_true = x
 
 cost = tf.reduce_mean(tf.pow(y_pred-y_true, 2))
-optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(cost)
+optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
 
 init = tf.global_variables_initializer()
 
