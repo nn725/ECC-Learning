@@ -91,7 +91,7 @@ class SimpleAgents(BaseAgents):
         self.transmitter_hidden_1 = tf.tanh(tf.matmul(self.msg, self.l1_transmitter))
         # self.transmitter_hidden_1 = tf.matmul(self.msg, self.l1_transmitter)
         self.transmitter_hidden_2 = tf.tanh(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter))
-        self.transmitter_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
+        self.transmitter_output = tf.squeeze(tf.tanh(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
         # self.transmitter_output = tf.verify_tensor_all_finite(self.transmitter_output,
         #         'transmitter output not finite')
 
@@ -109,7 +109,7 @@ class SimpleAgents(BaseAgents):
         self.receiver_hidden_1 = tf.tanh(tf.matmul(self.channel_output, self.l1_receiver))
         self.receiver_hidden_2 = tf.tanh(tf.matmul(self.receiver_hidden_1, self.l2_receiver))
         #self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
-        self.receiver_output = tf.squeeze(tf.matmul(self.receiver_hidden_2, self.l3_receiver))
+        self.receiver_output = tf.squeeze(tf.tanh(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
         self.receiver_output_binary = tf.map_fn(utils.binarize, self.receiver_output, dtype=tf.float32)
 
         # #alternate
@@ -127,7 +127,7 @@ class SimpleAgents(BaseAgents):
         self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
 
         #optimizers
-        self.rec_optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(
+        self.rec_optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(
                 self.rec_loss, var_list=self.trans_or_rec_vars)
 
         self.rec_errors = []
