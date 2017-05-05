@@ -22,13 +22,17 @@ def binarize_grad(x, dy):
 def binarize(x):
     return tf.sign(x)
 
-@function.Defun(grad_func=binarize_grad)
+@function.Defun()
+def bsc_grad(x, dy):
+    return dy
+
+@function.Defun(grad_func=bsc_grad)
 def bsc(x):
     msg_len = config.MSG_LEN 
     batch_size = config.BATCH_SIZE
     num_change = config.NUM_CHANGE 
     if num_change == 0:
-      return x
+      return tf.identity(x)
     indices = np.squeeze(np.random.randint(msg_len, size=[num_change, batch_size]))
     update = np.ones((batch_size, msg_len))
     update[range(batch_size), indices] = -1
