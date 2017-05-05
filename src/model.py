@@ -68,19 +68,15 @@ class SimpleAgents(BaseAgents):
         super(SimpleAgents, self).__init__(*args, **kwargs)
 
     def build_model(self):
-        self.l1_transmitter = utils.init_weights("transmitter_w_l1", [self.N, self.N])
-        self.l2_transmitter = utils.init_weights("transmitter_w_l2", [self.N, self.inter_len])
-        self.l3_transmitter = utils.init_weights("transmitter_w_l3", [self.inter_len, self.msg_len])
+        self.l1_transmitter = utils.init_weights("transmitter_w_l1", [self.N, self.inter_len])
+        self.l2_transmitter = utils.init_weights("transmitter_w_l2", [self.inter_len, self.msg_len])
         self.l1_receiver = utils.init_weights("receiver_w_l1", [self.msg_len, self.inter_len])
         self.l2_receiver = utils.init_weights("receiver_w_l2", [self.inter_len, self.N])
-        self.l3_receiver = utils.init_weights("receiver_w_l3", [self.N, self.N])
 
         self.msg = tf.placeholder("float", [None, self.N])
 
-        self.trans_saver = tf.train.Saver([self.l1_transmitter, self.l2_transmitter,
-            self.l3_transmitter])
-        self.rec_saver = tf.train.Saver([self.l1_receiver, self.l2_receiver,
-            self.l3_receiver])
+        self.trans_saver = tf.train.Saver([self.l1_transmitter, self.l2_transmitter])
+        self.rec_saver = tf.train.Saver([self.l1_receiver, self.l2_receiver])
 
         # self.trans_saver = tf.train.Saver([self.l1_transmitter])
         # self.rec_saver = tf.train.Saver([self.l1_receiver])
@@ -90,8 +86,8 @@ class SimpleAgents(BaseAgents):
         #(not used yet) FC layer -> Conv layer
         self.transmitter_hidden_1 = tf.tanh(tf.matmul(self.msg, self.l1_transmitter))
         # self.transmitter_hidden_1 = tf.matmul(self.msg, self.l1_transmitter)
-        self.transmitter_hidden_2 = tf.tanh(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter))
-        self.transmitter_output = tf.squeeze(tf.tanh(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
+        self.transmitter_output = tf.squeeze(tf.tanh(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter)))
+        #self.transmitter_output = tf.squeeze(tf.tanh(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
         # self.transmitter_output = tf.verify_tensor_all_finite(self.transmitter_output,
         #         'transmitter output not finite')
 
@@ -100,17 +96,17 @@ class SimpleAgents(BaseAgents):
         # self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
         # self.transmitter_output = tf.squeeze(conv_layer(self.transmitter_hidden_1, "transmitter"))
 
-        self.channel_input = tf.map_fn(utils.binarize, self.transmitter_output)
+        self.channel_input = utils.binarize(self.transmitter_output)
         self.channel_output = tf.to_float(tf.map_fn(utils.bsc, self.channel_input))
 
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
         #(not used yet) Conv Layer -> FC Layer
         self.receiver_hidden_1 = tf.tanh(tf.matmul(self.channel_output, self.l1_receiver))
-        self.receiver_hidden_2 = tf.tanh(tf.matmul(self.receiver_hidden_1, self.l2_receiver))
+        self.receiver_output = tf.squeeze(tf.tanh(tf.matmul(self.receiver_hidden_1, self.l2_receiver)))
         #self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
-        self.receiver_output = tf.squeeze(tf.tanh(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
-        self.receiver_output_binary = tf.map_fn(utils.binarize, self.receiver_output, dtype=tf.float32)
+        #self.receiver_output = tf.squeeze(tf.tanh(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
+        self.receiver_output_binary = utils.binarize(self.receiver_output)
 
         # #alternate
         # # 2 conv -> FC
@@ -127,8 +123,8 @@ class SimpleAgents(BaseAgents):
         self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
 
         #optimizers
-        self.rec_optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(
-                self.rec_loss, var_list=self.trans_or_rec_vars)
+        self.rec_optimizer = tf.train.RMSPropOptimizer(self.learning_rate).minimize(
+                tf.add(self.bin_loss, 0.5*self.rec_loss), var_list=self.trans_or_rec_vars)
 
         self.rec_errors = []
         self.bin_errors = []

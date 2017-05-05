@@ -56,7 +56,7 @@ y_pred = decoder_op
 y_true = x
 
 cost = tf.reduce_mean(tf.pow(y_pred-y_true, 2))
-optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
+optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(cost)
 
 init = tf.global_variables_initializer()
 
