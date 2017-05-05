@@ -23,7 +23,10 @@ def binarize(x):
     return tf.floor(x)*2+1
 
 @function.Defun(grad_func=binarize_grad)
-def bsc(x, num_change, msg_len, batch_size):
+def bsc(x):
+    msg_len = config.MSG_LEN 
+    batch_size = config.BATCH_SIZE
+    num_change = config.NUM_CHANGE 
     if num_change == 0:
       return x
     indices = np.squeeze(np.random.randint(msg_len, size=[num_change, batch_size]))

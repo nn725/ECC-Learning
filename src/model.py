@@ -100,7 +100,7 @@ class SimpleAgents(BaseAgents):
         # self.transmitter_output = tf.squeeze(conv_layer(self.transmitter_hidden_1, "transmitter"))
 
         self.channel_input = utils.binarize(self.transmitter_output)
-        self.channel_output = utils.bsc(self.channel_input, self.num_change, self.msg_len, self.batch_size)
+        self.channel_output = utils.bsc(self.channel_input)
 
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
@@ -127,7 +127,7 @@ class SimpleAgents(BaseAgents):
 
         #optimizers
         self.rec_optimizer = tf.train.RMSPropOptimizer(self.learning_rate).minimize(
-                tf.add(self.bin_loss, 0.5*self.rec_loss), var_list=self.trans_or_rec_vars)
+                tf.add(self.rec_loss, self.bin_loss), var_list=self.trans_or_rec_vars)
 
         self.rec_errors = []
         self.bin_errors = []
