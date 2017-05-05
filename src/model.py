@@ -133,10 +133,10 @@ class SimpleAgents(BaseAgents):
 
         global_step = tf.Variable(0, trainable=False)
 
-        lr = tf.train.exponential_decay(self.learning_rate, global_step, 500*self.batch_size*self.epochs, 0.9)
+        lr = tf.train.exponential_decay(self.learning_rate, global_step, 500*self.batch_size*self.epochs, 1)
         #optimizers
         self.rec_optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(
-                self.rec_loss, var_list=self.trans_or_rec_vars, global_step=global_step)
+                self.rec_loss+self.bin_loss, var_list=self.trans_or_rec_vars, global_step=global_step)
 
         self.rec_errors = []
         self.bin_errors = []
