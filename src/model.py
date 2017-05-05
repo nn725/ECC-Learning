@@ -134,7 +134,7 @@ class SimpleAgents(BaseAgents):
 
         #optimizers
         self.rec_optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(
-                self.rec_loss+0.5*self.bin_loss, var_list=self.trans_or_rec_vars)
+                self.rec_loss, var_list=self.trans_or_rec_vars)
 
         self.rec_errors = []
         self.bin_errors = []
