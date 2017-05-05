@@ -120,7 +120,7 @@ class SimpleAgents(BaseAgents):
         #Loss functions
         self.rec_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output)/2)
         self.bin_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output_binary)/2)
-        # self.bin_loss = tf.Print(self.bin_loss, [self.msg, self.receiver_output, self.rec_loss], summarize=8)
+        self.bin_loss = tf.Print(self.bin_loss, [self.msg-self.receiver_output_binary, self.bin_loss], summarize=4)
         #get training variables
         self.train_vars = tf.trainable_variables()
         self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
@@ -139,8 +139,7 @@ class SimpleAgents(BaseAgents):
             iterations = 500
             self.logger.info('Training Epoch: ' + str(i))
             rec_loss, bin_loss = self._train(iterations, i)
-            self.logger.info(iterations, rec_loss, i)
-            self.logger.info(iterations, bin_loss, i)
+            self.logger.info(iterations, rec_loss, bin_loss, i)
             self.rec_errors.append(rec_loss)
             self.bin_errors.append(bin_loss)
 
@@ -157,7 +156,7 @@ class SimpleAgents(BaseAgents):
 
             _, decode_err, bin_loss = self.sess.run([self.rec_optimizer,
                 self.rec_loss, self.bin_loss], feed_dict={self.msg: msg})
-            self.logger.debug(i, decode_err)
+            self.logger.debug(i, decode_err, bin_loss)
             rec_error = min(rec_error, decode_err)
             bin_error = min(bin_error, bin_loss)
 
