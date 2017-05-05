@@ -54,13 +54,14 @@ class TrainFormatter(logging.Formatter):
         iter_elapsed = timedelta(seconds=(time.time() - self.iter_time)).total_seconds()
         epoch_elapsed = timedelta(seconds=(time.time() - self.epoch_time)).total_seconds()
 
-        if len(args) > 1:
+        if len(args) > 2:
             self.epoch_time = time.time()
-            self.epoch = args[1]
+            self.epoch = args[2]
             epoch = True
         else:
             epoch = False
         err = args[0]
+        bin_err = args[1]
 
         self.iter_time = time.time()
 
@@ -70,6 +71,7 @@ class TrainFormatter(logging.Formatter):
         message = '[epoch:' + str(self.epoch) + '/step:' + str(iteration) + ']'
         message += 'Epoch Error:' if epoch else ' Error:'
         message += str(err)
+        message += ' Bin:' + str(bin_err)
         message += ' (Step: ' + '{0:.3f}'.format(iter_elapsed) + ' Epoch: ' + str(epoch_elapsed)[:6] + ')'
 
         record.msg = message

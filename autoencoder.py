@@ -16,7 +16,7 @@ def binarize_grad(x, dy):
 def binarize(x):
     return tf.floor(x)*2+1
 
-num_change=1
+num_change=0
 
 @function.Defun(grad_func=binarize_grad)
 def bsc(x):
@@ -60,13 +60,16 @@ def decoder(x):
     return layer2
 
 encoder_op = encoder(x)
-decoder_op = decoder(bsc(binarize(encoder_op)))
+channel_input = binarize(encoder_op)
+channel_output = bsc(channel_input)
+decoder_op = decoder(channel_output)
 
 y_pred = decoder_op
 y_true = x
 
 cost = tf.reduce_mean(tf.pow(y_pred-y_true, 2))
 optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(cost)
+# cost = tf.Print(cost, [channel_input, channel_output], summarize=16)
 
 init = tf.global_variables_initializer()
 
