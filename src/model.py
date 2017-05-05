@@ -93,14 +93,14 @@ class SimpleAgents(BaseAgents):
         #self.transmitter_output = tf.squeeze(tf.tanh(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
         # self.transmitter_output = tf.verify_tensor_all_finite(self.transmitter_output,
         #         'transmitter output not finite')
-
         # #alternate
         # # FC -> 2 conv layers
         # self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
         # self.transmitter_output = tf.squeeze(conv_layer(self.transmitter_hidden_1, "transmitter"))
 
         self.channel_input = utils.binarize(self.transmitter_output)
-        self.channel_output = utils.bsc(self.channel_input)
+        #self.channel_output = utils.bsc(self.channel_input)
+        self.channel_output = self.channel_input
 
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
@@ -120,14 +120,14 @@ class SimpleAgents(BaseAgents):
         #Loss functions
         self.rec_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output)/2)
         self.bin_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output_binary)/2)
-        # self.bin_loss = tf.Print(self.bin_loss, [self.msg, self.receiver_output, self.rec_loss], summarize=8)
+        # self.bin_loss = tf.Print(self.bin_loss, [tf.equal(self.channel_input, self.channel_output)])
         #get training variables
         self.train_vars = tf.trainable_variables()
         self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
 
         #optimizers
         self.rec_optimizer = tf.train.RMSPropOptimizer(self.learning_rate).minimize(
-                tf.add(5*self.bin_loss, 0.2*self.rec_loss), var_list=self.trans_or_rec_vars)
+                tf.add(self.bin_loss, 0.2*self.rec_loss), var_list=self.trans_or_rec_vars)
 
         self.rec_errors = []
         self.bin_errors = []
