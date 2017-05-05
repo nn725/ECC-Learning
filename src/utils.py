@@ -20,7 +20,7 @@ def binarize_grad(x, dy):
 
 @function.Defun(grad_func=binarize_grad)
 def binarize(x):
-    return tf.floor(x)*2+1
+    return tf.sign(x)
 
 @function.Defun(grad_func=binarize_grad)
 def bsc(x):
