@@ -19,7 +19,8 @@ mod_logger = logging.getLogger(__name__)
 class BaseAgents(object):
     def __init__(self, sess, block_len=config.BLOCK_LEN, msg_len=config.MSG_LEN,
                 inter_len=config.INTER_LEN, batch_size=config.BATCH_SIZE,
-                epochs=config.NUM_EPOCHS, learning_rate=config.LEARNING_RATE, level=None):
+                epochs=config.NUM_EPOCHS, learning_rate=config.LEARNING_RATE, 
+                num_change=config.NUM_CHANGE, level=None):
 
         self.sess = sess
 
@@ -48,6 +49,8 @@ class BaseAgents(object):
         self.epochs = epochs
         self.logger.info('LEARNING_RATE = ' + str(learning_rate))
         self.learning_rate = learning_rate
+        self.logger.info('NUM_CHANGE = ' + str(num_change))
+        self.num_change = num_change
 
         self.logger.info('BUILDING MODEL')
         self.build_model()
@@ -97,7 +100,7 @@ class SimpleAgents(BaseAgents):
         # self.transmitter_output = tf.squeeze(conv_layer(self.transmitter_hidden_1, "transmitter"))
 
         self.channel_input = utils.binarize(self.transmitter_output)
-        self.channel_output = tf.to_float(tf.map_fn(utils.bsc, self.channel_input))
+        self.channel_output = utils.bsc(self.channel_input, self.num_change, self.msg_len, self.batch_size)
 
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)

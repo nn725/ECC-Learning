@@ -22,7 +22,16 @@ def binarize_grad(x, dy):
 def binarize(x):
     return tf.floor(x)*2+1
 
-def bsc(bit, p=config.ERR_PROB):
+@function.Defun(grad_func=binarize_grad)
+def bsc(x, num_change, msg_len, batch_size):
+    if num_change == 0:
+      return x
+    indices = np.squeeze(np.random.randint(msg_len, size=[num_change, batch_size]))
+    update = np.ones((batch_size, msg_len))
+    update[range(batch_size), indices] = -1
+    return tf.multiply(x, tf.convert_to_tensor(update, dtype=tf.float32))
+
+def bsc_p(bit, p=config.ERR_PROB):
     return bit if np.random.random() >= p else tf.negative(bit)
 
 class TrainFormatter(logging.Formatter):

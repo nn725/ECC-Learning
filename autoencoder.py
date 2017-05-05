@@ -19,7 +19,7 @@ def binarize(x):
 num_change=1
 
 @function.Defun(grad_func=binarize_grad)
-def bsc(x):
+def bsc(x, num_change):
     indices = np.squeeze(np.random.randint(n_hidden_2, size=[num_change, batch_size]))
     update = np.ones((batch_size, n_hidden_2))
     update[range(batch_size), indices] = -1
