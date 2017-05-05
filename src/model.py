@@ -76,6 +76,13 @@ class SimpleAgents(BaseAgents):
         self.l1_receiver = utils.init_weights("receiver_w_l1", [self.msg_len, self.inter_len])
         self.l2_receiver = utils.init_weights("receiver_w_l2", [self.inter_len, self.N])
 
+        biases = {
+                'transmitter_b1': tf.Variable(tf.random_normal([self.inter_len])),
+                'transmitter_b2': tf.Variable(tf.random_normal([self.msg_len])),
+                'receiver_b1': tf.Variable(tf.random_normal([self.inter_len])),
+                'receiver_b2': tf.Variable(tf.random_normal([self.N]))
+                }
+
         self.msg = tf.placeholder("float", [None, self.N])
 
         self.trans_saver = tf.train.Saver([self.l1_transmitter, self.l2_transmitter])
@@ -87,13 +94,12 @@ class SimpleAgents(BaseAgents):
         #transmitter network
         #FC layer (block_len (N) x N) -> FC Layer (N x msg_len) -> Output Layer (msg_len x msg_len)
         #(not used yet) FC layer -> Conv layer
-        self.transmitter_hidden_1 = tf.tanh(tf.matmul(self.msg, self.l1_transmitter))
+        self.transmitter_hidden_1 = tf.tanh(tf.add(tf.matmul(self.msg, self.l1_transmitter), biases['transmitter_b1']))
         # self.transmitter_hidden_1 = tf.matmul(self.msg, self.l1_transmitter)
-        self.transmitter_output = tf.squeeze(tf.tanh(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter)))
+        self.transmitter_output = tf.squeeze(tf.tanh(tf.add(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter), biases['transmitter_b2'])))
         #self.transmitter_output = tf.squeeze(tf.tanh(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
         # self.transmitter_output = tf.verify_tensor_all_finite(self.transmitter_output,
         #         'transmitter output not finite')
-
         # #alternate
         # # FC -> 2 conv layers
         # self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
@@ -105,8 +111,8 @@ class SimpleAgents(BaseAgents):
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
         #(not used yet) Conv Layer -> FC Layer
-        self.receiver_hidden_1 = tf.tanh(tf.matmul(self.channel_output, self.l1_receiver))
-        self.receiver_output = tf.squeeze(tf.tanh(tf.matmul(self.receiver_hidden_1, self.l2_receiver)))
+        self.receiver_hidden_1 = tf.tanh(tf.add(tf.matmul(self.channel_output, self.l1_receiver), biases['receiver_b1']))
+        self.receiver_output = tf.squeeze(tf.tanh(tf.add(tf.matmul(self.receiver_hidden_1, self.l2_receiver), biases['receiver_b2'])))
         #self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
         #self.receiver_output = tf.squeeze(tf.tanh(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
         self.receiver_output_binary = utils.binarize(self.receiver_output)
