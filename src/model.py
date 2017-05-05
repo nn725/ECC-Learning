@@ -127,7 +127,7 @@ class SimpleAgents(BaseAgents):
 
         #optimizers
         self.rec_optimizer = tf.train.RMSPropOptimizer(self.learning_rate).minimize(
-                tf.add(self.rec_loss, self.bin_loss), var_list=self.trans_or_rec_vars)
+                tf.add(5*self.bin_loss, 0.2*self.rec_loss), var_list=self.trans_or_rec_vars)
 
         self.rec_errors = []
         self.bin_errors = []

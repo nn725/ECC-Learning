@@ -19,7 +19,9 @@ def binarize(x):
 num_change=1
 
 @function.Defun(grad_func=binarize_grad)
-def bsc(x, num_change):
+def bsc(x):
+    if num_change == 0:
+        return x
     indices = np.squeeze(np.random.randint(n_hidden_2, size=[num_change, batch_size]))
     update = np.ones((batch_size, n_hidden_2))
     update[range(batch_size), indices] = -1
@@ -58,7 +60,7 @@ def decoder(x):
     return layer2
 
 encoder_op = encoder(x)
-decoder_op = decoder(bsc(binarize(encoder_op), ))
+decoder_op = decoder(bsc(binarize(encoder_op)))
 
 y_pred = decoder_op
 y_true = x
