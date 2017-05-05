@@ -106,8 +106,7 @@ class SimpleAgents(BaseAgents):
         # self.transmitter_output = tf.squeeze(conv_layer(self.transmitter_hidden_1, "transmitter"))
 
         self.channel_input = utils.binarize(self.transmitter_output)
-        # self.channel_output = utils.bsc(self.channel_input)
-        self.channel_output = self.channel_input
+        self.channel_output = utils.bsc(self.channel_input)
 
         #reciever network
         #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
@@ -127,21 +126,23 @@ class SimpleAgents(BaseAgents):
         #Loss functions
         self.rec_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output)/2)
         self.bin_loss = tf.reduce_mean(tf.abs(self.msg - self.receiver_output_binary)/2)
-        # self.bin_loss = tf.Print(self.bin_loss, [self.msg, self.channel_output, self.receiver_output_binary], summarize=4)
+        # self.bin_loss = tf.Print(self.bin_loss, [self.msg], first_n=16, summarize=4)
         #get training variables
         self.train_vars = tf.trainable_variables()
         self.trans_or_rec_vars = [var for var in self.train_vars if 'transmitter_' in var.name or 'receiver_' in var.name]
 
+        global_step = tf.Variable(0, trainable=False)
+
+        #lr = tf.train.exponential_decay(self.learning_rate, global_step, 500*self.batch_size*self.epochs, 0.9)
         #optimizers
         self.rec_optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(
-                self.rec_loss, var_list=self.trans_or_rec_vars)
+                self.rec_loss+0.5*self.bin_loss, var_list=self.trans_or_rec_vars)
 
         self.rec_errors = []
         self.bin_errors = []
 
         #training
         tf.global_variables_initializer().run()
-        # tf.initialize_all_variables().run()
         for i in range(self.epochs):
             iterations = 500
             self.logger.info('Training Epoch: ' + str(i))
@@ -153,8 +154,8 @@ class SimpleAgents(BaseAgents):
         self.plot_errors()
 
     def _train(self, iterations, epoch):
-        rec_error = 1.0
-        bin_error = 1.0
+        rec_error = 0.0
+        bin_error = 0.0
 
         bs = self.batch_size
 
@@ -164,8 +165,8 @@ class SimpleAgents(BaseAgents):
             _, decode_err, bin_loss = self.sess.run([self.rec_optimizer,
                 self.rec_loss, self.bin_loss], feed_dict={self.msg: msg})
             self.logger.debug(i, decode_err, bin_loss)
-            rec_error = min(rec_error, decode_err)
-            bin_error = min(bin_error, bin_loss)
+            rec_error = max(rec_error, decode_err)
+            bin_error = max(bin_error, bin_loss)
 
         return rec_error, bin_error
 
