@@ -5,6 +5,7 @@ import datetime
 from datetime import timedelta
 import logging
 from . import config
+import random
 from tensorflow.python.framework import function
 
 def gen_data(n=config.BATCH_SIZE, block_len=config.BLOCK_LEN):
@@ -30,9 +31,10 @@ def bsc_grad(x, dy):
 def bsc(x):
     msg_len = config.MSG_LEN 
     batch_size = config.BATCH_SIZE
-    num_change = config.NUM_CHANGE 
+    num_change = np.random.randint(config.NUM_CHANGE)
     if num_change == 0:
       return tf.identity(x)
+
     indices = np.squeeze(np.random.randint(msg_len, size=[num_change, batch_size]))
     update = np.ones((batch_size, msg_len))
     update[range(batch_size), indices] = -1
@@ -40,6 +42,17 @@ def bsc(x):
 
 def bsc_p(bit, p=config.ERR_PROB):
     return bit if np.random.random() >= p else tf.negative(bit)
+
+def bsc_forward(x, msg_len, batch_size, n_change):
+  if n_change == 0:
+      return tf.identity(x)
+      
+  num_change = np.random.randint(n_change)
+  indices = np.squeeze(np.random.randint(msg_len, size=[num_change, batch_size]))
+  update = np.ones((batch_size, msg_len))
+  update[range(batch_size), indices] = -1
+  return tf.multiply(x, tf.convert_to_tensor(update, dtype=tf.float32))
+
 
 class TrainFormatter(logging.Formatter):
     def __init__(self):

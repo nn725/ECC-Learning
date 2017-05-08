@@ -76,7 +76,7 @@ class SimpleAgents(BaseAgents):
         self.l1_receiver = utils.init_weights("receiver_w_l1", [self.msg_len, self.inter_len])
         self.l2_receiver = utils.init_weights("receiver_w_l2", [self.inter_len, self.N])
 
-        biases = {
+        self.biases = {
                 'transmitter_b1': tf.Variable(tf.random_normal([self.inter_len])),
                 'transmitter_b2': tf.Variable(tf.random_normal([self.msg_len])),
                 'receiver_b1': tf.Variable(tf.random_normal([self.inter_len])),
@@ -88,39 +88,19 @@ class SimpleAgents(BaseAgents):
         self.trans_saver = tf.train.Saver([self.l1_transmitter, self.l2_transmitter])
         self.rec_saver = tf.train.Saver([self.l1_receiver, self.l2_receiver])
 
-        # self.trans_saver = tf.train.Saver([self.l1_transmitter])
-        # self.rec_saver = tf.train.Saver([self.l1_receiver])
 
-        #transmitter network
-        #FC layer (block_len (N) x N) -> FC Layer (N x msg_len) -> Output Layer (msg_len x msg_len)
-        #(not used yet) FC layer -> Conv layer
-        self.transmitter_hidden_1 = tf.tanh(tf.add(tf.matmul(self.msg, self.l1_transmitter), biases['transmitter_b1']))
-        # self.transmitter_hidden_1 = tf.matmul(self.msg, self.l1_transmitter)
-        self.transmitter_output = tf.squeeze(tf.tanh(tf.add(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter), biases['transmitter_b2'])))
-        #self.transmitter_output = tf.squeeze(tf.tanh(tf.matmul(self.transmitter_hidden_2, self.l3_transmitter)))
-        # self.transmitter_output = tf.verify_tensor_all_finite(self.transmitter_output,
-        #         'transmitter output not finite')
-        # #alternate
-        # # FC -> 2 conv layers
-        # self.transmitter_hidden_1 = tf.nn.sigmoid(tf.matmul(self.msg, self.l1_transmitter))
-        # self.transmitter_output = tf.squeeze(conv_layer(self.transmitter_hidden_1, "transmitter"))
+        self.transmitter_hidden_1 = tf.tanh(tf.add(tf.matmul(self.msg, self.l1_transmitter), self.biases['transmitter_b1']))
+        self.transmitter_output = tf.squeeze(tf.tanh(tf.add(tf.matmul(self.transmitter_hidden_1, self.l2_transmitter), self.biases['transmitter_b2'])))
+
 
         self.channel_input = utils.binarize(self.transmitter_output)
         self.channel_output = utils.bsc(self.channel_input)
 
-        #reciever network
-        #FC layer (msg_len x msg_len) -> FC Layer (msg_len x N) -> Output layer (N x N)
-        #(not used yet) Conv Layer -> FC Layer
-        self.receiver_hidden_1 = tf.tanh(tf.add(tf.matmul(self.channel_output, self.l1_receiver), biases['receiver_b1']))
-        self.receiver_output = tf.squeeze(tf.tanh(tf.add(tf.matmul(self.receiver_hidden_1, self.l2_receiver), biases['receiver_b2'])))
-        #self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
-        #self.receiver_output = tf.squeeze(tf.tanh(tf.matmul(self.receiver_hidden_2, self.l3_receiver)))
-        self.receiver_output_binary = utils.binarize(self.receiver_output)
 
-        # #alternate
-        # # 2 conv -> FC
-        # self.receiver_conv = conv_layer(self.channel_output, "receiver")
-        # self.receiver_output = tf.squeeze(tf.nn.sigmoid(tf.matmul(self.receiver_conv, self.l1_receiver)))
+        self.receiver_hidden_1 = tf.tanh(tf.add(tf.matmul(self.channel_output, self.l1_receiver), self.biases['receiver_b1']))
+        self.receiver_output = tf.squeeze(tf.tanh(tf.add(tf.matmul(self.receiver_hidden_1, self.l2_receiver), self.biases['receiver_b2'])))
+
+        self.receiver_output_binary = utils.binarize(self.receiver_output)
 
     def train(self):
         #Loss functions
@@ -136,7 +116,7 @@ class SimpleAgents(BaseAgents):
         lr = tf.train.exponential_decay(self.learning_rate, global_step, 500*self.batch_size*self.epochs, 1)
         #optimizers
         self.rec_optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(
-                self.rec_loss+self.bin_loss, var_list=self.trans_or_rec_vars, global_step=global_step)
+                self.rec_loss+0.5*self.bin_loss, var_list=self.trans_or_rec_vars, global_step=global_step)
 
         self.rec_errors = []
         self.bin_errors = []
@@ -152,6 +132,7 @@ class SimpleAgents(BaseAgents):
             self.bin_errors.append(bin_loss)
 
         self.plot_errors()
+        self.comparePerformance(self.num_change-1)
 
     def _train(self, iterations, epoch):
         rec_error = 0.0
@@ -177,6 +158,64 @@ class SimpleAgents(BaseAgents):
         plt.legend(['loss', 'binary error'])
         plt.xlabel('Epoch')
         plt.ylabel('Lowest decoding error achieved')
+        plt.show()
+
+    def comparePerformance(self, test_num_change):
+        #build same model with weights and test on
+        msg = tf.placeholder("float", [None, self.N])
+
+
+        transmitter_hidden_1 = tf.tanh(tf.add(tf.matmul(msg, self.l1_transmitter), self.biases['transmitter_b1']))
+        transmitter_output = tf.squeeze(tf.tanh(tf.add(tf.matmul(transmitter_hidden_1, self.l2_transmitter), self.biases['transmitter_b2'])))
+
+
+        channel_input = utils.binarize(transmitter_output)
+        channel_output = utils.bsc_forward(channel_input, self.msg_len, self.batch_size, test_num_change)
+
+
+        receiver_hidden_1 = tf.tanh(tf.add(tf.matmul(channel_output, self.l1_receiver), self.biases['receiver_b1']))
+        receiver_output = tf.squeeze(tf.tanh(tf.add(tf.matmul(receiver_hidden_1, self.l2_receiver), self.biases['receiver_b2'])))
+
+        receiver_output_binary = utils.binarize(receiver_output)
+
+        rec_loss = tf.reduce_mean(tf.abs(msg - receiver_output)/2)
+        bin_loss = tf.reduce_mean(tf.abs(msg - receiver_output_binary)/2)
+
+        bs = self.batch_size
+
+        rec_error = 0.0
+        bin_error = 0.0
+
+        rec_errors = []
+        bin_errors = []
+
+        trained_rec_errors = []
+        trained_bin_errors = []
+
+        iterations = 20
+
+        for i in range(iterations):
+            msgs = utils.gen_data(n=bs, block_len=self.block_len)
+            decode_err, binary_loss = self.sess.run([rec_loss, bin_loss], feed_dict={msg: msgs})
+            trained_decode_err, trained_binary_loss = self.sess.run([self.rec_loss, self.bin_loss], feed_dict={self.msg: msgs})
+
+            rec_errors.append(decode_err)
+            bin_errors.append(binary_loss)
+            trained_rec_errors.append(trained_decode_err)
+            trained_bin_errors.append(trained_binary_loss)
+
+        self.plotComparison(trained_rec_errors, trained_bin_errors, rec_errors, bin_errors)
+
+
+    def plotComparison(self, trained_rec_errors, trained_bin_errors, comp_rec_errors, comp_bin_errors):
+        sns.set_style('darkgrid')
+        plt.plot(trained_rec_errors)
+        plt.plot(trained_bin_errors)
+        plt.plot(comp_rec_errors)
+        plt.plot(comp_bin_errors)
+        plt.legend(['tr_rec_errors', 'tr_bin_errors', 'comp_rec_errors', 'comp_bin_errors'])
+        plt.xlabel('iteration')
+        plt.ylabel('lowest decoding error achieved')
         plt.show()
 
 
