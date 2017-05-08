@@ -38,6 +38,19 @@ def bsc(x):
     update[range(batch_size), indices] = -1
     return tf.multiply(x, tf.convert_to_tensor(update, dtype=tf.float32))
 
+@function.Defun()
+def absc_grad(x1, x2, dy):
+    return dy, dy
+
+@function.Defun(tf.float32, tf.int32, tf.float32, grad_func=absc_grad)
+def absc(channel_input, bits_to_flip, ones):
+    # update = -tf.ones_like(bits_to_flip)
+    # to_multiply = tf.scatter_update(ones, bits_to_flip, update)
+    # tf.assign(ones, tf.ones_like(channel_input))
+    # return tf.multiply(channel_input, to_multiply)
+    update = -tf.ones_like(bits_to_flip)
+    return tf.scatter_mul(channel_input, bits_to_flip, update)
+
 def bsc_p(bit, p=config.ERR_PROB):
     return bit if np.random.random() >= p else tf.negative(bit)
 
