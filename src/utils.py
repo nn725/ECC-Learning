@@ -11,6 +11,9 @@ from tensorflow.python.framework import function
 def gen_data(n=config.BATCH_SIZE, block_len=config.BLOCK_LEN):
     return np.random.randint(0, 2, size=(n, block_len))*2-1
 
+def gen_ham_data(n=config.BATCH_SIZE, block_len=config.BLOCK_LEN):
+    return np.random.randint(0, 2, size=(n, block_len))
+
 def init_weights(name, shape):
     return tf.get_variable(name, shape=shape,
             initializer=tf.contrib.layers.xavier_initializer())
@@ -22,6 +25,12 @@ def binarize_grad(x, dy):
 @function.Defun(grad_func=binarize_grad)
 def binarize(x):
     return tf.sign(x)
+
+def binarize_forward(x):
+    return tf.sign(x)
+
+def binarize_forward_0(x):
+    return tf.sign(x)*2-1
 
 @function.Defun()
 def bsc_grad(x, dy):
@@ -47,7 +56,7 @@ def bsc_forward(x, msg_len, batch_size, n_change):
   if n_change == 0:
       return tf.identity(x)
       
-  num_change = np.random.randint(n_change)
+  num_change = n_change #np.random.randint(n_change)
   indices = np.squeeze(np.random.randint(msg_len, size=[num_change, batch_size]))
   update = np.ones((batch_size, msg_len))
   update[range(batch_size), indices] = -1

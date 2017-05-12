@@ -1,7 +1,12 @@
 import tensorflow as tf
+import matplotlib
+matplotlib.use('TkAgg')
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 from argparse import ArgumentParser
-from src.model import SimpleAgents, AdversaryAgents, IndependentAgents
+from src.model import SimpleAgents, HammingAgents, AdversaryAgents, IndependentAgents
 from src.config import *
 
 from sys import version_info
@@ -32,7 +37,7 @@ def build_parser():
     parser = ArgumentParser()
 
     parser.add_argument('sys_type', type=str,
-            choices=('simple', 'adversary', 'independent'),
+            choices=('simple', 'hamming', 'adversary', 'independent'),
             help='which type of system to use',
             metavar='TYPE', default='simple')
 
@@ -52,6 +57,10 @@ def build_parser():
             help='learning rate (default %(default)s)',
             metavar='LEARNING_RATE', default=LEARNING_RATE)
 
+    parser.add_argument('--num_change', type=int, dest='num_change',
+            help='max number of flipped bits', metavar='NUM_CHANGE',
+            default=NUM_CHANGE)
+
     parser.add_argument('--batch-size', type=int, dest='batch_size',
             help='batch size', metavar='BATCH_SIZE', default=BATCH_SIZE)
 
@@ -60,11 +69,73 @@ def build_parser():
 
     return parser
 
+def plotErrors():
+    sns.set_style('darkgrid')
+    #num_ch[i] is max errors for each num change from 0 through 4 for num_change=i
+    max_rec_errors_num_ch = []
+    max_bin_errors_num_ch = []
+    for i in range(0,4):
+        NUM_CHANGE = i
+        with tf.Session() as sess:
+            agents = SimpleAgents(sess, block_len=BLOCK_LEN, msg_len=MSG_LEN,
+                    inter_len=INTER_LEN, batch_size=BATCH_SIZE, epochs=100,
+                    learning_rate=0.01, num_change=i, level=None)
+
+            all_rec_errors, all_bin_errors = agents.train()
+            max_rec_errors = []
+            max_bin_errors = []
+            for i in range(len(all_rec_errors)):
+                max_rec_errors.append(max(all_rec_errors[i]))
+                max_bin_errors.append(max(all_bin_errors[i]))
+
+            max_rec_errors_num_ch.append(max_rec_errors)
+            max_bin_errors_num_ch.append(max_bin_errors)
+
+    num_ch_to_max_rec_err = []
+    num_ch_to_max_bin_err = []
+    for j in range(0,4):
+        #x axis
+        num_ch_rec_err_i = []
+        num_ch_bin_err_i = []
+        for i in range(0,4):
+            #which index to extract
+            num_ch_rec_err_i.append(max_rec_errors_num_ch[i][j])
+            num_ch_bin_err_i.append(max_bin_errors_num_ch[i][j])
+
+        num_ch_to_max_rec_err.append(num_ch_rec_err_i)
+        num_ch_to_max_bin_err.append(num_ch_bin_err_i)
+
+    plt.title('Reconstruction errors across multiple bit flips')
+    for i in range(len(num_ch_to_max_rec_err)):
+        plt.plot(num_ch_to_max_rec_err[i])
+    plt.legend(['0 bit flips', '1 bit flip', '2 bit flips', '3 bit flips', '4 bit flips'])
+    plt.xlabel('Max number of bits flipped for training')
+    plt.ylabel('Average decoding error')
+    xint = range(0, 4)
+    plt.xticks(xint)
+    plt.show()
+    plt.savefig('rec_errors_across_multiple_bit_flips.eps', format='eps', dpi=1000)
+
+    plt.title('Binarized errors across multiple bit flips')
+    for i in range(len(num_ch_to_max_bin_err)):
+        plt.plot(num_ch_to_max_bin_err[i])
+    plt.legend(['0 bit flips', '1 bit flip', '2 bit flips', '3 bit flips', '4 bit flips'])
+    plt.xlabel('Max number of bits flipped for training')
+    plt.ylabel('Average decoding error')
+    xint = range(0, 4)
+    plt.xticks(xint)
+    plt.show()
+    plt.savefig('bin_errors_across_multiple_bit_flips.eps', format='eps', dpi=1000)
+
+
+
 def main():
     logger.debug('Building parser')
     parser = build_parser()
     logger.debug('Parsing args')
     options = parser.parse_args()
+
+    #plotErrors()
 
     with tf.Session() as sess:
         level = logging.INFO
@@ -76,6 +147,9 @@ def main():
         if options.sys_type == 'simple':
             logger.info('Using SimpleAgents')
             agents_class = SimpleAgents
+        if options.sys_type == 'hamming':
+            logger.info('Using HammingAgents')
+            agents_class = HammingAgents
         elif options.sys_type == 'adversary':
             logger.info('Using AdversaryAgents')
             agents_class = AdversaryAgents
