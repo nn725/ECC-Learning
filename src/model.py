@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 from . import config
 from . import utils
@@ -372,8 +373,172 @@ class IndependentAgents(BaseAgents):
     def __init__(self, *args, **kwargs):
         super(IndependentAgents, self).__init__(*args, **kwargs)
 
+    def __init__(self, sess, block_len=config.BLOCK_LEN, msg_len=config.MSG_LEN,
+                inter_len=config.INTER_LEN, batch_size=config.BATCH_SIZE,
+                epochs=config.NUM_EPOCHS, learning_rate=config.LEARNING_RATE, 
+                num_change=config.NUM_CHANGE, level=None):
+
+        self.sess = sess
+
+        if not level:
+            level = logging.INFO
+
+        self.logger = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.logger.setLevel(level)
+        ch = logging.StreamHandler()
+        fh = logging.FileHandler('train_log')
+        ch.setFormatter(utils.TrainFormatter())
+        fh.setFormatter(utils.TrainFormatter())
+        self.logger.addHandler(ch)
+        self.logger.addHandler(fh)
+
+        self.logger.info('MSG_LEN = ' + str(msg_len))
+        self.msg_len = msg_len
+        self.logger.info('BLOCK_LEN = ' + str(block_len))
+        self.block_len = block_len
+        self.logger.info('INTER_LEN = ' + str(inter_len))
+        self.inter_len = inter_len
+        self.N = block_len
+        self.logger.info('BATCH_SIZE = ' + str(batch_size))
+        self.batch_size = batch_size
+        self.logger.info('EPOCHS = ' + str(epochs))
+        self.epochs = epochs
+        self.logger.info('LEARNING_RATE = ' + str(learning_rate))
+        self.learning_rate = learning_rate
+        self.logger.info('NUM_CHANGE = ' + str(num_change))
+        self.num_change = num_change
+
+        self.logger.info('BUILDING MODEL')
+        self.build_model()
+
     def build_model(self):
-        pass
+        self.msg = tf.placeholder('float', shape=[self.batch_size, self.N])
+        self.condition = tf.placeholder('int32', shape=[])
+
+        self.in_1 = tf.Variable(self.msg, trainable=False)
+        self.in_2 = tf.Variable(self.msg, trainable=False)
+
+        self.trans_1 = self.create_trans('1', self.in_1)
+        self.trans_2 = self.create_trans('2', self.in_2)
+
+        self.channel_1 = utils.bsc(self.trans_1)
+        self.channel_2 = utils.bsc(self.trans_2)
+
+        self.rec_1_out, self.rec_1_bin = self.create_rec('1', self.channel_2)
+        self.rec_2_out, self.rec_2_bin = self.create_rec('2', self.channel_1)
+
+        self.assign_1 = tf.assign(self.in_1, tf.cond(self.condition < 1, lambda: self.msg, lambda: self.rec_1_bin))
+        self.assign_2 = tf.assign(self.in_2, tf.cond(self.condition > 0, lambda: self.msg, lambda: self.rec_2_bin))
+
+    def create_trans(self, name, placeholder):
+        l1_transmitter = utils.init_weights(name+"_transmitter_w_l1", [self.N, self.inter_len])
+        l2_transmitter = utils.init_weights(name+"_transmitter_w_l2", [self.inter_len, self.msg_len])
+
+        biases = {
+                'transmitter_b1': tf.Variable(tf.random_normal([self.inter_len])),
+                'transmitter_b2': tf.Variable(tf.random_normal([self.msg_len]))
+                }
+
+        transmitter_hidden_1 = tf.tanh(tf.add(tf.matmul(placeholder, l1_transmitter), biases['transmitter_b1']))
+        transmitter_output = tf.squeeze(tf.tanh(tf.add(tf.matmul(transmitter_hidden_1, l2_transmitter), biases['transmitter_b2'])))
+
+        channel_input = utils.binarize(transmitter_output)
+
+        return channel_input
+
+    def create_rec(self, name, channel_output):
+        l1_receiver = utils.init_weights(name+"_receiver_w_l1", [self.msg_len, self.inter_len])
+        l2_receiver = utils.init_weights(name+"_receiver_w_l2", [self.inter_len, self.N])
+        biases = {
+                'receiver_b1': tf.Variable(tf.random_normal([self.inter_len])),
+                'receiver_b2': tf.Variable(tf.random_normal([self.N]))
+                }
+
+        receiver_hidden_1 = tf.tanh(tf.add(tf.matmul(channel_output, l1_receiver), biases['receiver_b1']))
+        receiver_output = tf.squeeze(tf.tanh(tf.add(tf.matmul(receiver_hidden_1, l2_receiver), biases['receiver_b2'])))
+
+        receiver_output_binary = utils.binarize(receiver_output)
+
+        return receiver_output, receiver_output_binary
 
     def train(self):
-        pass
+        #Loss functions
+        self.rec_1_loss = tf.reduce_mean(tf.abs(self.msg - self.rec_1_out)/2)
+        self.bin_1_loss = tf.reduce_mean(tf.abs(self.msg - self.rec_1_bin)/2)
+        self.rec_2_loss = tf.reduce_mean(tf.abs(self.msg - self.rec_2_bin)/2)
+        self.bin_2_loss = tf.reduce_mean(tf.abs(self.msg - self.rec_2_bin)/2)
+        # self.rec_2_loss = tf.Print(self.rec_2_loss, [self.msg, self.in_1, self.in_2], first_n=32)
+        # self.bin_loss = tf.Print(self.bin_loss, [self.msg], first_n=16, summarize=4)
+        #get training variables
+        self.train_vars = tf.trainable_variables()
+        self.train_1_vars = [var for var in self.train_vars if '1_' == var.name[:2]]
+        self.train_2_vars = [var for var in self.train_vars if '2_' == var.name[:2]]
+
+        global_step = tf.Variable(0, trainable=False)
+
+        # lr = tf.train.exponential_decay(self.learning_rate, global_step, 500*self.batch_size*self.epochs, 1)
+        #optimizers
+        self.optimizer_1 = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(
+                0.5*self.rec_1_loss+0.5*self.bin_1_loss, var_list=self.train_1_vars,
+                global_step=global_step)
+        self.optimizer_2 = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(
+                0.5*self.rec_2_loss+0.5*self.bin_2_loss, var_list=self.train_1_vars,
+                global_step=global_step)
+
+        self.rec_1_errors = []
+        # self.bin_1_errors = []
+        self.rec_2_errors = []
+        # self.bin_2_errors = []
+
+        #training
+        tf.global_variables_initializer().run(feed_dict={self.msg: np.ones((self.batch_size, self.N))})
+        for i in range(self.epochs):
+            iterations = 500
+            self.logger.info('Training Epoch: ' + str(i))
+            rec_1_loss, bin_1_loss = self._train(0, iterations, i)
+            self.logger.info(iterations, rec_1_loss, bin_1_loss, i)
+            self.rec_1_errors.append(rec_1_loss)
+            # self.bin_1_errors.append(bin_1_loss)
+            rec_2_loss, bin_2_loss = self._train(1, iterations, i)
+            self.logger.info(iterations, rec_2_loss, bin_2_loss, i)
+            self.rec_2_errors.append(rec_2_loss)
+            # self.bin_2_errors.append(bin_2_loss)
+
+        self.plot_errors()
+        # self.comparePerformance(self.num_change-1)
+
+    def _train(self, cond, iterations, epoch):
+        rec_error = 0.0
+        bin_error = 0.0
+
+        bs = self.batch_size
+
+        for i in range(iterations):
+            msg = utils.gen_data(n=bs, block_len=self.block_len)
+
+            if not cond:
+                self.sess.run([self.rec_2_bin ,self.assign_1, self.assign_2], feed_dict={self.msg: msg, self.condition: cond})
+                _, decode_err, bin_loss = self.sess.run([self.optimizer_1,
+                    self.rec_1_loss, self.bin_1_loss], feed_dict={self.msg: msg})
+            else:
+                self.sess.run([self.rec_1_bin, self.assign_1, self.assign_2], feed_dict={self.msg: msg, self.condition: cond})
+                _, decode_err, bin_loss = self.sess.run([self.optimizer_2,
+                    self.rec_2_loss, self.bin_2_loss], feed_dict={self.msg:msg})
+            self.logger.debug(i, decode_err, bin_loss)
+            rec_error = max(rec_error, decode_err)
+            bin_error = max(bin_error, bin_loss)
+
+        return rec_error, bin_error
+
+    def plot_errors(self):
+        # sns.set_style('darkgrid')
+        plt.plot(self.rec_1_errors)
+        # plt.plot(self.bin_1_errors)
+        plt.plot(self.rec_2_errors)
+        # plt.plot(self.bin_2_errors)
+        plt.legend(['Agent 1 loss', 'Agent 2 loss'])
+        # plt.legend(['loss 1', 'binary error 1', 'loss 2', 'binary error 2'])
+        plt.xlabel('Epoch')
+        plt.ylabel('Highest decoding error achieved')
+        plt.show()
+
